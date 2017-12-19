@@ -1,0 +1,119 @@
+<html>
+  <head>
+    <title>Advent of Code - Day 19</title>
+    <style>
+    #input {
+      font-family: monospace;
+      font-size: 8px;
+      line-height: 8px;
+      letter-spacing: 2px;
+    }
+
+    .letter {
+      position: absolute;
+      display: block;
+      font-family: monospace;
+      font-size: 7px;
+      line-height: 7px;
+      width: 7px;
+      height: 7px;
+    }
+
+    #puzzle {
+      position: relative;
+    }
+    </style>
+    <script type="text/javascript">
+      const svgNS = 'http://www.w3.org/2000/svg';
+      const cellSize = 7;
+
+      function go() {
+        let input = document.getElementById('input');
+        let grid = input.value.split('\n').map(a => a.split(''));
+
+        let height = grid.length;
+        let width = grid.map(a => a.length).reduce((a,b) => Math.max(a, b));
+
+        let puzzle = document.getElementById('puzzle');
+        puzzle.innerHTML = '';
+        let svgElem = document.createElementNS(svgNS, 'svg');
+        svgElem.setAttribute('style', 'border: 1px solid #888');
+        svgElem.setAttribute('width', width * cellSize);
+        svgElem.setAttribute('height', height * cellSize);
+        let startX = 0;
+        for (let y = 0; y < grid.length; ++y) {
+          for (let x = 0; x < grid[y].length; ++x) {
+            if (grid[y][x] !== ' ') {
+              if (y === 0) {
+                startX = x;
+              }
+              let id = 'l-' + x + '-' + y;
+              let textElem = document.createElementNS(svgNS, 'text');
+              textElem.setAttributeNS(null, 'id', id);
+              textElem.setAttributeNS(null, 'x', (x + 1) * cellSize);
+              textElem.setAttributeNS(null, 'y', (y + 1) * cellSize);
+              textElem.setAttributeNS(null, 'font-family', 'monospace');
+              textElem.setAttributeNS(null, 'font-size', cellSize);
+              
+              let textNode = document.createTextNode(grid[y][x]);
+              textElem.appendChild(textNode);
+              svgElem.appendChild(textElem);
+            }
+          }
+        }
+        puzzle.appendChild(svgElem);
+
+        let x = startX;
+        let y = -1;
+        let dx = 0;
+        let dy = 1;
+        let solution1 = '';
+        let solution2 = 0;
+        let step = function() {
+          x += dx;
+          y += dy;
+          solution2++;
+          let change = true;
+          if (grid[y][x].match(/[A-Z]/)) {
+            solution1 += grid[y][x];
+            change = false;
+          } else if (grid[y][x] === '+') {
+            if (dx !== 0) {
+              dx = 0;
+              if (grid[y - 1][x] !== ' ') dy = -1;
+              else dy = 1;
+            } else {
+              dy = 0;
+              if (grid[y][x - 1] !== ' ') dx = -1;
+              else dx = 1;
+            }
+          } else if (!grid[y][x].match(/-|\|/)) {
+            return;
+          }
+
+          if (change) {
+            let elem = document.getElementById('l-' + x + '-' + y);
+            elem.innerHTML = '#';
+          }
+
+          document.getElementById('output-1').innerHTML = solution1;
+          document.getElementById('output-2').innerHTML = solution2;
+          window.setTimeout(step, 0);
+        };
+
+        window.setTimeout(step, 0);
+      }
+    </script>
+  </head>
+  <body>
+    <label>Paste your puzzle input below then click this: </label>
+    <button type="button" onclick="go()">Go!</button>
+    <p>
+      Part 1 solution: <span id="output-1">n/a</span><br>
+      Part 2 solution: <span id="output-2">n/a</span><br>
+    </p>
+    <div id="puzzle">
+      <textarea id="input" rows="205" cols="205"></textarea>
+    </div>
+  </body>
+</html>
