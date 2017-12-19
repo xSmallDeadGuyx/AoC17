@@ -1,0 +1,213 @@
+<html>
+  <head>
+    <title>Advent of Code - Day 18, part 2</title>
+    <style>
+    .program {
+      display: inline-block;
+      float: left;
+      margin: 0px 16px;
+      width: 300px;
+    }
+
+    .program-part {
+      width: 148px;
+      display: inline-block;
+      float: left;
+      font-family: monospace;
+      border: 1px solid #888;
+    }
+
+    #input {
+      font-family: monospace;
+    }
+    </style>
+    <script type="text/javascript">
+      class Program {
+        constructor(id, program) {
+          this.id = id;
+          this.program = program;
+          this.registers = {
+            p: id
+          };
+          for (let c of program) {
+            if (c.length < 2) continue;
+            for (let arg of c.slice(1)) {
+              if (isNaN(arg) && this.registers[arg] === undefined) {
+                console.log(c, arg);
+                this.registers[arg] = 0;
+              }
+            }
+          }
+          this.queue = [];
+          this.i = 0;
+          this.ended = false;
+          this.waiting = false;
+          this.sendCount = 0;
+        }
+
+        val(x) {
+          let n = parseInt(x, 10);
+          if (!isNaN(n)) return n;
+
+          if (this.registers[x] === undefined) {
+            this.registers[x] = 0;
+          }
+          return this.registers[x];
+        }
+
+        next(other) {
+          if (this.ended) return;
+          let c = this.program[this.i];
+          if (c[0] === 'snd') {
+            this.sendCount++;
+            other.queue.push(this.val(c[1]));
+          } else if (c[0] === 'set') {
+            this.registers[c[1]] = this.val(c[2]);
+          } else if (c[0] === 'add') {
+            this.registers[c[1]] = this.val(c[1]) + this.val(c[2]);
+          } else if (c[0] === 'mul') {
+            this.registers[c[1]] = this.val(c[1]) * this.val(c[2]);
+          } else if (c[0] === 'mod') {
+            this.registers[c[1]] = this.val(c[1]) % this.val(c[2]);
+          } else if (c[0] === 'rcv') {
+            if (this.queue.length === 0) {
+              this.waiting = true;
+              if (other.ended || other.waiting) this.ended = true;
+              return;
+            }
+
+            this.waiting = false;
+            this.registers[c[1]] = this.queue.splice(0, 1)[0];
+          } else if (c[0] === 'jgz') {
+            if (this.val(c[1]) > 0) {
+              this.i += this.val(c[2]);
+              return;
+            }
+          }
+
+          this.i++;
+          if (this.i >= this.program.length) {
+            this.ended = true;
+          }
+        }
+
+        makeOutput() {
+          this.output = document.createElement('div');
+          this.output.classList.add('program');
+
+          let title = document.createElement('p');
+          title.style['text-align'] = 'center';
+          title.innerHTML = 'Program ' + this.id;
+          this.output.appendChild(title);
+
+          let progOut = document.createElement('div');
+          progOut.classList.add('program-part');
+          progOut.innerHTML = 'INSTRUCTIONS:<br>';
+
+          this.instructionOutputs = [];
+          for (let c of this.program) {
+            let line = document.createElement('span');
+            line.style.display = 'block';
+            line.style.width = '100%';
+            line.innerHTML = c.join(' ');
+            this.instructionOutputs.push(line);
+            progOut.appendChild(line);
+          }
+
+          let countOut = document.createElement('div');
+          countOut.classList.add('program-part');
+          countOut.innerHTML = 'SEND COUNT:<br>';
+          this.countOutput = document.createElement('span');
+          this.countOutput.innerHTML = '0';
+          countOut.append(this.countOutput);
+
+          let regOut = document.createElement('div');
+          regOut.classList.add('program-part');
+          regOut.innerHTML = 'REGISTERS:<br>';
+
+          this.registerOutputs = {};
+          for (let r in this.registers) {
+            let line = document.createElement('span');
+            line.innerHTML = r + ' = ';
+            let out = document.createElement('span');
+            out.innerHTML = this.registers[r];
+            this.registerOutputs[r] = out;
+            line.appendChild(out);
+            line.appendChild(document.createElement('br'));
+            regOut.appendChild(line);
+          }
+
+          let queueOut = document.createElement('div');
+          queueOut.classList.add('program-part');
+          queueOut.innerHTML = 'RECEIVER QUEUE:<br>';
+
+          this.queueOutput = document.createElement('span');
+          queueOut.appendChild(this.queueOutput);
+
+          this.output.appendChild(progOut);
+          this.output.appendChild(countOut);
+          this.output.appendChild(regOut);
+          this.output.appendChild(queueOut);
+          return this.output;
+        }
+      }
+
+      var program0, program1;
+
+      function load() {
+        let input = document.getElementById('input');
+        let program = input.value.split('\n').map(a => a.split(' '));
+
+        program0 = new Program(0, program);
+        program1 = new Program(1, program);
+
+        let out = document.getElementById('main');
+        out.innerHTML = '<div style="width: 664px; text-align: center"><button type="button" onclick="go()">Play!</button></div>';
+        out.appendChild(program0.makeOutput());
+        out.appendChild(program1.makeOutput());
+
+        program0.instructionOutputs[program0.i].style['background-color'] = col(program0);
+        program1.instructionOutputs[program1.i].style['background-color'] = col(program1);
+      }
+
+      function col(prog) {
+        if (prog.ended) return '#f88';
+        if (prog.waiting) return '#ff8';
+        return '#8f8';
+      }
+
+      function go() {
+        program0.instructionOutputs[program0.i].style['background-color'] = '#fff';
+        program1.instructionOutputs[program1.i].style['background-color'] = '#fff';
+
+        program0.next(program1);
+        program1.next(program0);
+
+        for (let p of [program0, program1]) {
+          for (let r in p.registers) {
+            p.registerOutputs[r].innerHTML = p.registers[r];
+          }
+          p.queueOutput.innerHTML = p.queue.join('<br>');
+          p.countOutput.innerHTML = p.sendCount;
+        }
+
+        if (program0.ended && program1.ended) {
+          alert('Done! Answer is: ' + program1.sendCount);
+          return;
+        }
+
+        program0.instructionOutputs[program0.i].style['background-color'] = col(program0);
+        program1.instructionOutputs[program1.i].style['background-color'] = col(program1);
+
+        window.setTimeout(go, 0);
+      }
+    </script>
+  </head>
+  <body>
+    <div id="main">
+      <p>Paste your input here:</p>
+      <textarea id="input" rows="42" cols="20"></textarea><br>
+      <button type="button" onclick="load()">Load!</button>
+    </div>
+  </body>
+</html>
