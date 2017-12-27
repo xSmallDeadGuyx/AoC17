@@ -1,0 +1,10 @@
+set b 105700
+set c 122700
+jp b 2 // jump if prime
+sub h -1
+set g b
+sub g c
+jnz g 2
+jnz 1 3
+sub b -17
+jnz 1 -7
